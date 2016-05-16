@@ -32,6 +32,10 @@ run:  erl
 	if [ ! -f ~/.hosts.erlang ] ; then echo "file ~/.hosts.erlang does not exist, run 'touch ~/.hosts.erlang' to fix this problem" ; exit 1  ; fi
 	${ERL} -s edis
 
+ets:  erl
+	if [ ! -f ~/.hosts.erlang ] ; then echo "file ~/.hosts.erlang does not exist, run 'touch ~/.hosts.erlang' to fix this problem" ; exit 1  ; fi
+	${ERL} -s edis -config ets.config
+
 test: erl
 	#${ERL} -config test/test.config -noshell -sname edis_test_server -s edis &
 	mkdir -p ./test/ebin
