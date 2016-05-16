@@ -37,7 +37,7 @@ ets:  erl
 	${ERL} -s edis -config ets.config
 
 test: erl
-	#${ERL} -config test/test.config -noshell -sname edis_test_server -s edis &
+	${ERL} -config test/test.config -noshell -sname edis_test_server -s edis &
 	mkdir -p ./test/ebin
 	mkdir -p ./logs/ct
 	# To run all tests, remove: suites=keys
