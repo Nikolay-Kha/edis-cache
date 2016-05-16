@@ -11,47 +11,71 @@
 
 -include("edis.hrl").
 
--record(ref, {}).
--opaque ref() :: #ref{}.
--export_type([ref/0]).
-
 -export([init/3, write/2, put/3, delete/2, fold/3, is_empty/1, destroy/1, status/1, get/2]).
+
+-type ref() :: undefined.
+-export_type([ref/0]).
 
 %% ====================================================================
 %% Behaviour functions
 %% ====================================================================
 -spec init(string(), non_neg_integer(), [any()]) -> {ok, ref()} | {error, term()}.
 init(_Dir, _Index, _Options) ->
-  {ok, #ref{}}.
+  catch (ets:new(?MODULE, [set, public, named_table])),
+  {ok, undefined}.
 
 -spec write(ref(), edis_backend:write_actions()) -> ok | {error, term()}.
-write(#ref{}, Actions) ->
+write(Ref, Actions) ->
+  [begin
+	  case Action of
+		  {put, Key, Item} ->
+			  put(Ref, Key, Item);
+		  {delete, Key} ->
+			  delete(Ref, Key);
+		  clear ->
+			  destroy(Ref)
+	  end
+   end || Action <- Actions],
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
-put(#ref{}, Key, Item) ->
+put(_Ref, Key, Item) ->
+  ets:insert(?MODULE, {Key, Item}),
   ok.
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
-delete(#ref{}, Key) ->
+delete(_Ref, Key) ->
+  ets:delete(?MODULE, Key),
   ok.
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
-fold(#ref{}, Fun, InitValue) ->
-  ok.
+fold(_Ref, Fun, InitValue) ->
+  ets:foldl(Fun, InitValue, ?MODULE).
 
 -spec is_empty(ref()) -> boolean().
-is_empty(#ref{}) ->
-  ok.
+is_empty(_Ref) ->
+  case ets:first(?MODULE) of
+    '$end_of_table' ->
+           true;
+     _Result ->
+           false
+  end.
 
 -spec destroy(ref()) -> ok | {error, term()}.
-destroy(#ref{}) ->
+destroy(_Ref) ->
+  ets:delete_all_objects(?MODULE),
   ok.
 
 -spec status(ref()) -> {ok, binary()} | error.
-status(#ref{}) ->
+status(_Ref) ->
   {ok, <<"Empty">>}.
 
 -spec get(ref(), binary()) -> #edis_item{} | not_found | {error, term()}.
-get(#ref{}, Key) ->
-  #edis_item{key = Key, encoding = raw, type = string, value = <<"Data">>}.
+get(_Ref, Key) ->
+  case ets:lookup(?MODULE, Key) of
+    [] ->
+      not_found;
+    [{_Key, Item}] ->
+      Item
+  end.
+  %#edis_item{key = Key, encoding = raw, type = string, value = <<"Data">>}.
