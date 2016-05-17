@@ -85,7 +85,8 @@ delete(#ref{pid = Pid}, Key) ->
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
 fold(#ref{pid = _Pid}, _Fun, _InitValue) ->
-  ok.
+  %% TODO
+  throw(not_implemented).
 
 -spec is_empty(ref()) -> boolean().
 is_empty(#ref{pid = _Pid}) ->

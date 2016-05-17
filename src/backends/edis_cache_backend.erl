@@ -43,7 +43,8 @@ write(Ref, Actions) ->
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
-put(#ref{riakref = RiakRef, etsref = _EtsRef}, Key, Item) ->
+put(#ref{riakref = RiakRef, etsref = EtsRef}, Key, Item) ->
+  edis_ets_backend:put(EtsRef, Key, Item),
   edis_riak_backend:put(RiakRef, Key, Item).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
@@ -54,7 +55,7 @@ delete(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
 fold(#ref{riakref = _RiakRef, etsref = _EtsRef}, _Fun, _InitValue) ->
   %% TODO
-  ok.
+  throw(not_implemented).
 
 -spec is_empty(ref()) -> boolean().
 is_empty(#ref{riakref = RiakRef, etsref = _EtsRef}) ->
