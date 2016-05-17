@@ -69,9 +69,13 @@ write(Ref, Actions) ->
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
 put(#ref{pid = Pid}, Key, Item) ->
-  %% TODO read before write?
   {Bucket, RiakKey} = bucketkey(Key),
-  Object = riakc_obj:new(Bucket, RiakKey, Item),
+  Object = case riakc_pb_socket:get(Pid, Bucket, RiakKey) of
+    {ok, ReadObj} ->
+      riakc_obj:update_value(ReadObj, Item);
+    _ ->
+      riakc_obj:new(Bucket, RiakKey, Item)
+  end,
   riakc_pb_socket:put(Pid, Object).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
