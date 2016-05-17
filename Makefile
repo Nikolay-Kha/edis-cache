@@ -28,17 +28,20 @@ analyze: erl
 xref: erl
 	rebar skip_deps=true xref
 
-run:  erl
+check_hosts:
 	if [ ! -f ~/.hosts.erlang ] ; then echo "file ~/.hosts.erlang does not exist, run 'touch ~/.hosts.erlang' to fix this problem" ; exit 1  ; fi
+
+run:  erl check_hosts
 	${ERL} -s edis
 
-ets:  erl
-	if [ ! -f ~/.hosts.erlang ] ; then echo "file ~/.hosts.erlang does not exist, run 'touch ~/.hosts.erlang' to fix this problem" ; exit 1  ; fi
+ets:  erl check_hosts
 	${ERL} -s edis -config ets.config
 
-riak:  erl
-	if [ ! -f ~/.hosts.erlang ] ; then echo "file ~/.hosts.erlang does not exist, run 'touch ~/.hosts.erlang' to fix this problem" ; exit 1  ; fi
+riak: erl check_hosts
 	${ERL} -s edis -config riak.config
+
+cache: erl check_hosts
+	${ERL} -s edis -config cache.config
 
 test: erl
 	${ERL} -config test/test.config -noshell -sname edis_test_server -s edis &
