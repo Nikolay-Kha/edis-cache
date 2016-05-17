@@ -69,6 +69,9 @@ write(Ref, Actions) ->
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
 put(#ref{pid = Pid}, Key, Item) ->
+  %% This implementation store edis_item as is. But it is possible
+  %% to parse edis_item and store it in a corresponding riak datatype.
+  %% 'get' command should be implemented in the same way then.
   {Bucket, RiakKey} = bucketkey(Key),
   Object = case riakc_pb_socket:get(Pid, Bucket, RiakKey) of
     {ok, ReadObj} ->
