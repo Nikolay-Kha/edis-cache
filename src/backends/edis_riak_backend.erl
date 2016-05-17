@@ -22,6 +22,23 @@
 -export([init/3, write/2, put/3, delete/2, fold/3, is_empty/1, destroy/1, status/1, get/2]).
 
 %% ====================================================================
+%% Private functions
+%% ====================================================================
+-spec bucketkey(binary()) -> {bucket(), key()}.
+bucketkey(Str) ->
+  DefaultBucket = <<"default">>,
+  case binary:split(Str, <<$:>>, []) of
+    [Key] ->
+      {DefaultBucket, Key};
+	[Key, <<>>] ->
+      {DefaultBucket, Key};
+    [<<>>, Key] ->
+      {DefaultBucket, Key};
+	[Bucket, Key] ->
+	  {Bucket, Key}
+  end.
+
+%% ====================================================================
 %% Behaviour functions
 %% ====================================================================
 -spec init(string(), non_neg_integer(), config_option()) -> {ok, ref()} | {error, term()}.
@@ -53,12 +70,14 @@ write(Ref, Actions) ->
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
 put(#ref{pid = Pid}, Key, Item) ->
   %% TODO read before write?
-  Object = riakc_obj:new(<<"default">>, Key, Item),
+  {Bucket, RiakKey} = bucketkey(Key),
+  Object = riakc_obj:new(Bucket, RiakKey, Item),
   riakc_pb_socket:put(Pid, Object).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
 delete(#ref{pid = Pid}, Key) ->
-  riakc_pb_socket:delete(Pid, <<"default">>, Key).
+  {Bucket, RiakKey} = bucketkey(Key),
+  riakc_pb_socket:delete(Pid, Bucket, RiakKey).
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
 fold(#ref{pid = _Pid}, _Fun, _InitValue) ->
@@ -67,12 +86,11 @@ fold(#ref{pid = _Pid}, _Fun, _InitValue) ->
 -spec is_empty(ref()) -> boolean().
 is_empty(#ref{pid = _Pid}) ->
   %% TODO
-  ok.
+  false.
 
 -spec destroy(ref()) -> ok | {error, term()}.
 destroy(#ref{pid = _Pid}) ->
-  %% TODO
-  ok.
+  riakc_pb_socket:stop(Pid).
 
 -spec status(ref()) -> {ok, binary()} | error.
 status(#ref{pid = _Pid}) ->
@@ -80,7 +98,8 @@ status(#ref{pid = _Pid}) ->
 
 -spec get(ref(), binary()) -> #edis_item{} | not_found | {error, term()}.
 get(#ref{pid = Pid}, Key) ->
-  case riakc_pb_socket:get(Pid, <<"default">>, Key) of
+  {Bucket, RiakKey} = bucketkey(Key),
+  case riakc_pb_socket:get(Pid, Bucket, RiakKey) of
     {ok, RiakObj} ->
       binary_to_term(riakc_obj:get_value(RiakObj));
     {error, notfound} ->
