@@ -89,7 +89,7 @@ is_empty(#ref{pid = _Pid}) ->
   false.
 
 -spec destroy(ref()) -> ok | {error, term()}.
-destroy(#ref{pid = _Pid}) ->
+destroy(#ref{pid = Pid}) ->
   riakc_pb_socket:stop(Pid).
 
 -spec status(ref()) -> {ok, binary()} | error.
