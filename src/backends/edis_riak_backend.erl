@@ -86,6 +86,7 @@ delete(#ref{pid = Pid}, Key) ->
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
 fold(#ref{pid = _Pid}, _Fun, _InitValue) ->
   %% TODO
+  %% without it commands DBSIZE, KEYS won't work
   throw(not_implemented).
 
 -spec is_empty(ref()) -> boolean().

@@ -53,9 +53,9 @@ delete(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
   edis_riak_backend:delete(RiakRef, Key).
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
-fold(#ref{riakref = _RiakRef, etsref = _EtsRef}, _Fun, _InitValue) ->
-  %% TODO
-  throw(not_implemented).
+fold(#ref{riakref = _RiakRef, etsref = EtsRef}, Fun, InitValue) ->
+  edis_ets_backend:fold(EtsRef, Fun, InitValue),
+  edis_riak_backend:fold(RiakRef, Fun, InitValue).
 
 -spec is_empty(ref()) -> boolean().
 is_empty(#ref{riakref = RiakRef, etsref = _EtsRef}) ->
