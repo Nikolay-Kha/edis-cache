@@ -11,7 +11,8 @@
 
 -include("edis.hrl").
 
--record(ref, {riakref    :: edis_riak_backend:ref()}).
+-record(ref, {riakref    :: edis_riak_backend:ref(),
+			  etsref    :: edis_ets_backend:ref()}).
 -opaque ref() :: #ref{}.
 -export_type([ref/0]).
 
@@ -22,9 +23,9 @@
 %% ====================================================================
 -spec init(string(), non_neg_integer(), [any()]) -> {ok, ref()} | {error, term()}.
 init(Dir, Index, Options) ->
-  edis_ets_backend:init(Dir, Index, Options),
+  {ok, EtsRef} = edis_ets_backend:init(Dir, Index, Options),
   {ok, RiakRef} = edis_riak_backend:init(Dir, Index, Options),
-  {ok, #ref{riakref = RiakRef}}.
+  {ok, #ref{riakref = RiakRef, etsref = EtsRef}}.
 
 -spec write(ref(), edis_backend:write_actions()) -> ok | {error, term()}.
 write(Ref, Actions) ->
@@ -42,30 +43,48 @@ write(Ref, Actions) ->
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
-put(#ref{riakref = _RiakRef}, _Key, _Item) ->
-  ok.
+put(#ref{riakref = RiakRef, etsref = _EtsRef}, Key, Item) ->
+  edis_riak_backend:put(RiakRef, Key, Item).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
-delete(#ref{riakref = _RiakRef}, _Key) ->
-  ok.
+delete(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
+  edis_ets_backend:delete(EtsRef, Key),
+  edis_riak_backend:delete(RiakRef, Key).
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
-fold(#ref{riakref = _RiakRef}, _Fun, _InitValue) ->
+fold(#ref{riakref = _RiakRef, etsref = _EtsRef}, _Fun, _InitValue) ->
+  %% TODO
   ok.
 
 -spec is_empty(ref()) -> boolean().
-is_empty(#ref{riakref = _RiakRef}) ->
-  false.
+is_empty(#ref{riakref = RiakRef, etsref = _EtsRef}) ->
+  case edis_ets_backend:is_empty(RiakRef) of
+    true ->
+      true;
+    false ->
+      edis_riak_backend:is_empty(RiakRef)
+  end.
 
 -spec destroy(ref()) -> ok | {error, term()}.
-destroy(#ref{riakref = RiakRef}) ->
-  edis_ets_backend:destroy(undefined),
+destroy(#ref{riakref = RiakRef, etsref = EtsRef}) ->
+  edis_ets_backend:destroy(EtsRef),
   edis_riak_backend:destroy(RiakRef).
 
 -spec status(ref()) -> {ok, binary()} | error.
-status(#ref{riakref = _RiakRef}) ->
+status(#ref{riakref = _RiakRef, etsref = _EtsRef}) ->
   {ok, <<"Empty">>}.
 
 -spec get(ref(), binary()) -> #edis_item{} | not_found | {error, term()}.
-get(#ref{riakref = _RiakRef}, _Key) ->
-  not_found.
+get(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
+  case edis_ets_backend:get(EtsRef, Key) of
+    not_found ->
+      case edis_riak_backend:get(RiakRef, Key) of
+        Item when is_record(Item, edis_item) ->
+          edis_ets_backend:put(EtsRef, Key, Item),
+          Item;
+        Result ->
+          Result
+      end;
+    Result ->
+      Result
+  end.
