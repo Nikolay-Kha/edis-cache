@@ -11,18 +11,25 @@
 
 -include("edis.hrl").
 
+-define (CACHETIMEOUT, "cache_ttl_seconds").
+-define (DEFAULTCACHETIMEOUT, 2).
+
 -record(ref, {riakref    :: edis_riak_backend:ref(),
-			  etsref    :: edis_ets_backend:ref()}).
+              etsref    :: edis_ets_backend:ref()}).
 -opaque ref() :: #ref{}.
 -export_type([ref/0]).
+
+-type config_option() :: {cache_ttl, non_neg_integer()}.
 
 -export([init/3, write/2, put/3, delete/2, fold/3, is_empty/1, destroy/1, status/1, get/2]).
 
 %% ====================================================================
 %% Behaviour functions
 %% ====================================================================
--spec init(string(), non_neg_integer(), [any()]) -> {ok, ref()} | {error, term()}.
+-spec init(string(), non_neg_integer(), config_option()) -> {ok, ref()} | {error, term()}.
 init(Dir, Index, Options) ->
+  CacheTimeOut = proplists:get_value(cache_ttl, Options, ?DEFAULTCACHETIMEOUT),
+  erlang:put(?CACHETIMEOUT, CacheTimeOut),
   {ok, EtsRef} = edis_ets_backend:init(Dir, Index, Options),
   {ok, RiakRef} = edis_riak_backend:init(Dir, Index, Options),
   {ok, #ref{riakref = RiakRef, etsref = EtsRef}}.
@@ -31,20 +38,20 @@ init(Dir, Index, Options) ->
 write(Ref, Actions) ->
   %% TODO check each operation ret
   [begin
-	  case Action of
-		  {put, Key, Item} ->
-			  put(Ref, Key, Item);
-		  {delete, Key} ->
-			  delete(Ref, Key);
-		  clear ->
-			  destroy(Ref)
-	  end
+    case Action of
+      {put, Key, Item} ->
+        put(Ref, Key, Item);
+      {delete, Key} ->
+        delete(Ref, Key);
+      clear ->
+        destroy(Ref)
+     end
    end || Action <- Actions],
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
 put(#ref{riakref = RiakRef, etsref = EtsRef}, Key, Item) ->
-  edis_ets_backend:put(EtsRef, Key, Item),
+  edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
   edis_riak_backend:put(RiakRef, Key, Item).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
@@ -53,7 +60,7 @@ delete(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
   edis_riak_backend:delete(RiakRef, Key).
 
 -spec fold(ref(), edis_backend:fold_fun(), term()) -> term().
-fold(#ref{riakref = _RiakRef, etsref = EtsRef}, Fun, InitValue) ->
+fold(#ref{riakref = RiakRef, etsref = EtsRef}, Fun, InitValue) ->
   edis_ets_backend:fold(EtsRef, Fun, InitValue),
   edis_riak_backend:fold(RiakRef, Fun, InitValue).
 
@@ -81,11 +88,15 @@ get(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
     not_found ->
       case edis_riak_backend:get(RiakRef, Key) of
         Item when is_record(Item, edis_item) ->
-          edis_ets_backend:put(EtsRef, Key, Item),
+          edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
           Item;
         Result ->
           Result
       end;
-    Result ->
-      Result
+    Item when is_record(Item, edis_item) ->
+      %% update expire time
+      edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
+      Item;
+    Error ->
+      Error
   end.

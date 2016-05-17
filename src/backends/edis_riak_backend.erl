@@ -30,12 +30,12 @@ bucketkey(Str) ->
   case binary:split(Str, <<$:>>, []) of
     [Key] ->
       {DefaultBucket, Key};
-	[Key, <<>>] ->
+    [Key, <<>>] ->
       {DefaultBucket, Key};
     [<<>>, Key] ->
       {DefaultBucket, Key};
-	[Bucket, Key] ->
-	  {Bucket, Key}
+    [Bucket, Key] ->
+      {Bucket, Key}
   end.
 
 %% ====================================================================
@@ -56,14 +56,14 @@ init(_Dir, _Index, Options) ->
 write(Ref, Actions) ->
   %% TODO check each operation ret
   [begin
-	  case Action of
-		  {put, Key, Item} ->
-			  put(Ref, Key, Item);
-		  {delete, Key} ->
-			  delete(Ref, Key);
-		  clear ->
-			  destroy(Ref)
-	  end
+    case Action of
+      {put, Key, Item} ->
+        put(Ref, Key, Item);
+      {delete, Key} ->
+        delete(Ref, Key);
+      clear ->
+        destroy(Ref)
+    end
    end || Action <- Actions],
   ok.
 
