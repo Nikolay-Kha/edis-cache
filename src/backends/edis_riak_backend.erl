@@ -53,18 +53,28 @@ init(_Dir, _Index, Options) ->
   end.
 
 -spec write(ref(), edis_backend:write_actions()) -> ok | {error, term()}.
-write(Ref, Actions) ->
-  %% TODO check each operation ret
-  [begin
-    case Action of
-      {put, Key, Item} ->
-        put(Ref, Key, Item);
-      {delete, Key} ->
-        delete(Ref, Key);
-      clear ->
-        destroy(Ref)
-    end
-   end || Action <- Actions],
+write(Ref, [{put, Key, Item} | Actions]) ->
+  case put(Ref, Key, Item) of
+    ok ->
+      write(Ref, Actions);
+    Error ->
+      Error
+  end;
+write(Ref, [{delete, Key} | Actions]) ->
+  case delete(Ref, Key) of
+    ok ->
+      write(Ref, Actions);
+    Error ->
+      Error
+  end;
+write(Ref, [clear | Actions]) ->
+  case destroy(Ref) of
+    ok ->
+      write(Ref, Actions);
+    Error ->
+      Error
+  end;
+write(_Ref, []) ->
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
@@ -99,7 +109,8 @@ is_empty(#ref{pid = _Pid}) ->
 
 -spec destroy(ref()) -> ok | {error, term()}.
 destroy(#ref{pid = Pid}) ->
-  riakc_pb_socket:stop(Pid).
+  %% TODO cleanup whole db, otherwise flushdb won't work
+  ok.
 
 -spec status(ref()) -> {ok, binary()} | error.
 status(#ref{pid = _Pid}) ->
