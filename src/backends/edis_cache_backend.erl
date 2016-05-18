@@ -15,7 +15,8 @@
 -define (DEFAULTCACHETIMEOUT, 2).
 
 -record(ref, {riakref    :: edis_riak_backend:ref(),
-              etsref    :: edis_ets_backend:ref()}).
+              etsref    :: edis_ets_backend:ref(),
+              cache_ttl_seconds :: non_neg_integer()}).
 -opaque ref() :: #ref{}.
 -export_type([ref/0]).
 
@@ -29,10 +30,9 @@
 -spec init(string(), non_neg_integer(), config_option()) -> {ok, ref()} | {error, term()}.
 init(Dir, Index, Options) ->
   CacheTimeOut = proplists:get_value(cache_ttl, Options, ?DEFAULTCACHETIMEOUT),
-  erlang:put(?CACHETIMEOUT, CacheTimeOut),
   {ok, EtsRef} = edis_ets_backend:init(Dir, Index, Options),
   {ok, RiakRef} = edis_riak_backend:init(Dir, Index, Options),
-  {ok, #ref{riakref = RiakRef, etsref = EtsRef}}.
+  {ok, #ref{riakref = RiakRef, etsref = EtsRef, cache_ttl_seconds = CacheTimeOut}}.
 
 -spec write(ref(), edis_backend:write_actions()) -> ok | {error, term()}.
 write(Ref, [{put, Key, Item} | Actions]) ->
@@ -60,8 +60,8 @@ write(_Ref, []) ->
   ok.
 
 -spec put(ref(), binary(), #edis_item{}) -> ok | {error, term()}.
-put(#ref{riakref = RiakRef, etsref = EtsRef}, Key, Item) ->
-  edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
+put(#ref{riakref = RiakRef, etsref = EtsRef, cache_ttl_seconds = TimeOut}, Key, Item) ->
+  edis_ets_backend:cache(EtsRef, Key, Item, TimeOut),
   edis_riak_backend:put(RiakRef, Key, Item).
 
 -spec delete(ref(), binary()) -> ok | {error, term()}.
@@ -93,19 +93,19 @@ status(#ref{riakref = _RiakRef, etsref = _EtsRef}) ->
   {ok, <<"Empty">>}.
 
 -spec get(ref(), binary()) -> #edis_item{} | not_found | {error, term()}.
-get(#ref{riakref = RiakRef, etsref = EtsRef}, Key) ->
+get(#ref{riakref = RiakRef, etsref = EtsRef, cache_ttl_seconds = TimeOut}, Key) ->
   case edis_ets_backend:get(EtsRef, Key) of
     not_found ->
       case edis_riak_backend:get(RiakRef, Key) of
         Item when is_record(Item, edis_item) ->
-          edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
+          edis_ets_backend:cache(EtsRef, Key, Item, TimeOut),
           Item;
         Result ->
           Result
       end;
     Item when is_record(Item, edis_item) ->
       %% update expire time
-      edis_ets_backend:cache(EtsRef, Key, Item, erlang:get(?CACHETIMEOUT)),
+      edis_ets_backend:cache(EtsRef, Key, Item, TimeOut),
       Item;
     Error ->
       Error

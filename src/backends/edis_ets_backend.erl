@@ -21,7 +21,7 @@
 %% ====================================================================
 -spec init(string(), non_neg_integer(), [any()]) -> {ok, ref()} | {error, term()}.
 init(_Dir, _Index, _Options) ->
-  catch (ets:new(?MODULE, [set, public, named_table])),
+  catch (ets:new(?MODULE, [set, public, named_table, {read_concurrency, true}, {write_concurrency, true}])),
   {ok, undefined}.
 
 -spec write(ref(), edis_backend:write_actions()) -> ok | {error, term()}.
@@ -56,7 +56,7 @@ put(_Ref, Key, Item) ->
 
 -spec cache(ref(), binary(), #edis_item{}, non_neg_integer()) -> ok | {error, term()}.
 cache(_Ref, Key, Item, TimeoutSeconds) ->
-  ExpireAt = edis_util:now() + TimeoutSeconds,
+  ExpireAt = timestamp() + TimeoutSeconds,
   ets:insert(?MODULE, {Key, Item, ExpireAt}),
   ok.
 
@@ -89,7 +89,7 @@ status(_Ref) ->
 
 -spec get(ref(), binary()) -> #edis_item{} | not_found | {error, term()}.
 get(_Ref, Key) ->
-  Now = edis_util:now(),
+  Now = timestamp(),
   case ets:lookup(?MODULE, Key) of
     [] ->
       not_found;
@@ -102,3 +102,11 @@ get(_Ref, Key) ->
       Item
   end.
   %#edis_item{key = Key, encoding = raw, type = string, value = <<"Data">>}.
+
+%% ====================================================================
+%% Private functions
+%% ====================================================================
+-spec timestamp() -> non_neg_integer().
+timestamp() ->
+  {Mega,Sec,_Micro} = os:timestamp(),
+  Mega*1000000+Sec.

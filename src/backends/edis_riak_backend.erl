@@ -22,23 +22,6 @@
 -export([init/3, write/2, put/3, delete/2, fold/3, is_empty/1, destroy/1, status/1, get/2]).
 
 %% ====================================================================
-%% Private functions
-%% ====================================================================
--spec bucketkey(binary()) -> {bucket(), key()}.
-bucketkey(Str) ->
-  DefaultBucket = <<"default">>,
-  case binary:split(Str, <<$:>>, []) of
-    [Key] ->
-      {DefaultBucket, Key};
-    [Key, <<>>] ->
-      {DefaultBucket, Key};
-    [<<>>, Key] ->
-      {DefaultBucket, Key};
-    [Bucket, Key] ->
-      {Bucket, Key}
-  end.
-
-%% ====================================================================
 %% Behaviour functions
 %% ====================================================================
 -spec init(string(), non_neg_integer(), config_option()) -> {ok, ref()} | {error, term()}.
@@ -126,4 +109,21 @@ get(#ref{pid = Pid}, Key) ->
       not_found;
     Error ->
       Error
+  end.
+
+%% ====================================================================
+%% Private functions
+%% ====================================================================
+-spec bucketkey(binary()) -> {bucket(), key()}.
+bucketkey(Str) ->
+  DefaultBucket = <<"default">>,
+  case binary:split(Str, <<$:>>, []) of
+    [Key] ->
+      {DefaultBucket, Key};
+    [Key, <<>>] ->
+      {DefaultBucket, Key};
+    [<<>>, Key] ->
+      {DefaultBucket, Key};
+    [Bucket, Key] ->
+      {Bucket, Key}
   end.
