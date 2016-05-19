@@ -272,13 +272,12 @@ brpoplpush(Config) ->
 	<<"foo">> = erldis_client:sr_scall(Client,[<<"lrange">>,<<"list3">>,0,-1]),
 
     %% With multiple blocked clients
-	%% TODO replace del with flushdb after implementing it for riak
-	%%ok = erldis_client:sr_scall(Client,[<<"flushdb">>]),
-	erldis_client:sr_scall(Client,[<<"del">>,<<"mylist">>,<<"target">>]),
+	ok = erldis_client:sr_scall(Client,[<<"flushdb">>]),
     ok = erldis_client:sr_scall(Client,[<<"set">>,<<"string">>,<<"I'm not a list">>]),
 	
 	spawn(?MODULE, run_command, [self(),Client,[<<"brpoplpush">>,<<"mylist">>,<<"string">>,0]]),
 	spawn(?MODULE, run_command, [self(),Client2,[<<"brpoplpush">>,<<"mylist">>,<<"target">>,0]]),
+	timer:sleep(500),
 	true = erldis_client:sr_scall(Client3,[<<"rpush">>,<<"mylist">>,<<"testtest">>]),
 
 	receive
