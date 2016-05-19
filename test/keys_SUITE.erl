@@ -11,7 +11,7 @@
 
 all() -> 
      %% [exists_del, object_idletime, expire_ttl, expireat, persist, rename, renamenx, type, move, pattern, randomkey].
-    [exists_del, object_idletime, expire_ttl, expireat, persist, rename, renamenx, type].
+    [exists_del, object_idletime, expire_ttl, expireat, pexpire_ttl, pexpireat, persist, rename, renamenx, type].
  	
 init_per_suite(Config) ->
 	{ok,Client} = connect_erldis(10),
@@ -97,6 +97,40 @@ expireat(Config)->
 	timer:sleep(3000),
 	-1 = erldis_client:sr_scall(Client,[<<"ttl">>,<<"key1">>]).
 
+
+pexpire_ttl(Config)->
+	{client,Client} = lists:keyfind(client, 1, Config),
+
+	ok = erldis_client:sr_scall(Client,[<<"set">>,<<"key1">>,<<"hello">>]),
+	true = erldis_client:sr_scall(Client,[<<"del">>,<<"key1">>,<<"hello">>]),
+	-1 = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]),
+	ok = erldis_client:sr_scall(Client,[<<"set">>,<<"key1">>,<<"hello">>]),
+	-1 = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]),
+	true = erldis_client:sr_scall(Client,[<<"pexpire">>,<<"key1">>,<<"3">>]),
+	timer:sleep(500),
+	Res = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]),
+    Res > 2000,
+    Res < 3000,
+	timer:sleep(3000),
+	-1 = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]).
+
+
+pexpireat(Config)->
+	{client,Client} = lists:keyfind(client, 1, Config),
+
+	%% Retrieving Unix timestamp
+	{Mega, Sec, Micro} = os:timestamp(),
+	Timestamp = (Mega * 1000000 + Sec) * 1000 + erlang:round(Micro / 1000),
+	WaitThree = Timestamp + 3000,
+
+	ok = erldis_client:sr_scall(Client,[<<"set">>,<<"key1">>,<<"hello">>]),
+	true = erldis_client:sr_scall(Client,[<<"pexpireat">>,<<"key1">>,WaitThree]),
+	timer:sleep(500),
+	Res = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]),
+    Res > 2000,
+    Res < 3000,
+	timer:sleep(3000),
+	-1 = erldis_client:sr_scall(Client,[<<"pttl">>,<<"key1">>]).
 
 
 persist(Config)->
