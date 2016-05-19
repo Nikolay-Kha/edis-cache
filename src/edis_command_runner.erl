@@ -243,9 +243,15 @@ parse_command(#edis_command{cmd = <<"EXISTS">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"EXPIRE">>, args = [Key, Seconds]}) -> 
   C#edis_command{args = [Key, edis_util:binary_to_integer(Seconds)], result_type = boolean, group=keys};
 parse_command(#edis_command{cmd = <<"EXPIRE">>}) -> throw(bad_arg_num);
+parse_command(C = #edis_command{cmd = <<"PEXPIRE">>, args = [Key, MiliSeconds]}) -> 
+  C#edis_command{args = [Key, edis_util:binary_to_integer(MiliSeconds)], result_type = boolean, group=keys};
+parse_command(#edis_command{cmd = <<"PEXPIRE">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"EXPIREAT">>, args = [Key, Timestamp]}) -> 
   C#edis_command{args = [Key, edis_util:binary_to_integer(Timestamp)],result_type = boolean, group=keys};
 parse_command(#edis_command{cmd = <<"EXPIREAT">>}) -> throw(bad_arg_num);
+parse_command(C = #edis_command{cmd = <<"PEXPIREAT">>, args = [Key, Timestamp]}) -> 
+  C#edis_command{args = [Key, edis_util:binary_to_integer(Timestamp)],result_type = boolean, group=keys};
+parse_command(#edis_command{cmd = <<"PEXPIREAT">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"KEYS">>, args = [Pattern]}) -> C#edis_command{args = [edis_util:glob_to_re(Pattern)], result_type = multi_bulk, group=keys};
 parse_command(#edis_command{cmd = <<"KEYS">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"MOVE">>, args = [Key, Db]}) ->
@@ -286,6 +292,9 @@ parse_command(#edis_command{cmd = <<"SORT">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"TTL">>, args =[_Key]}) -> 
   C#edis_command{result_type = number, group=keys};
 parse_command(#edis_command{cmd = <<"TTL">>}) -> throw(bad_arg_num);
+parse_command(C = #edis_command{cmd = <<"PTTL">>, args =[_Key]}) ->
+  C#edis_command{result_type = number, group=keys};
+parse_command(#edis_command{cmd = <<"PTTL">>}) -> throw(bad_arg_num);
 parse_command(C = #edis_command{cmd = <<"TYPE">>, args = [_Key]}) -> 
   C#edis_command{result_type = string, group=keys};
 parse_command(#edis_command{cmd = <<"TYPE">>}) -> throw(bad_arg_num);
@@ -334,7 +343,7 @@ parse_command(C = #edis_command{cmd = <<"BRPOP">>, args = Args}) ->
   try edis_util:binary_to_integer(Timeout) of
     T when T < 0 -> throw({is_negative, "timeout"});
     0 -> C#edis_command{args = lists:reverse(Keys), timeout = infinity, expire = never, result_type = multi_bulk, group=lists};
-    T -> C#edis_command{args = lists:reverse(Keys), timeout = T * 1000, expire = timeout_to_seconds(T), result_type = multi_bulk, group=lists}
+    T -> C#edis_command{args = lists:reverse(Keys), timeout = T * 1000, expire = timeout_to_miliseconds(T), result_type = multi_bulk, group=lists}
   catch
     _:not_integer -> throw({not_integer, <<"timeout">>})
   end;
@@ -345,7 +354,7 @@ parse_command(C = #edis_command{cmd = <<"BLPOP">>, args = Args}) ->
   try edis_util:binary_to_integer(Timeout) of
     T when T < 0 -> throw({is_negative, "timeout"});
     0 -> C#edis_command{args = lists:reverse(Keys), timeout = infinity, expire = never, result_type = multi_bulk, group=lists};
-    T -> C#edis_command{args = lists:reverse(Keys), timeout = T * 1000, expire = timeout_to_seconds(T), result_type = multi_bulk, group=lists}
+    T -> C#edis_command{args = lists:reverse(Keys), timeout = T * 1000, expire = timeout_to_miliseconds(T), result_type = multi_bulk, group=lists}
   catch
     _:not_integer -> throw({not_integer, <<"timeout">>})
   end;
@@ -353,7 +362,7 @@ parse_command(C = #edis_command{cmd = <<"BRPOPLPUSH">>, args = [Source, Destinat
   try edis_util:binary_to_integer(Timeout) of
     T when T < 0 -> throw({is_negative, "timeout"});
     0 -> C#edis_command{args = [Source, Destination], timeout = infinity, expire = never, result_type = bulk, group=lists};
-    T -> C#edis_command{args = [Source, Destination], timeout = T * 1000, expire = timeout_to_seconds(T), result_type = bulk, group=lists}
+    T -> C#edis_command{args = [Source, Destination], timeout = T * 1000, expire = timeout_to_miliseconds(T), result_type = bulk, group=lists}
   catch
     _:not_integer -> throw({not_integer, <<"timeout">>})
   end;
@@ -1035,8 +1044,8 @@ tcp_zrange(Range, ShowScores, Limit, State) ->
     end,
   tcp_multi_bulk(Reply, State).
 
-timeout_to_seconds(infinity) -> infinity;
-timeout_to_seconds(Timeout) -> edis_util:now() + Timeout.
+timeout_to_miliseconds(infinity) -> infinity;
+timeout_to_miliseconds(Timeout) -> edis_util:now() + Timeout * 1000.
 
 parse_error(Cmd, unsupported) -> <<Cmd/binary, " unsupported in this version">>;
 parse_error(Cmd, nested) -> <<Cmd/binary, " calls can not be nested">>;

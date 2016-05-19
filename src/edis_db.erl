@@ -256,7 +256,7 @@ handle_call(#edis_command{cmd = <<"SETEX">>, args = [Key, Seconds, Value]}, _Fro
       db_put(
         Key,
         #edis_item{key = Key, type = string, encoding = raw,
-                   expire = edis_util:now() + Seconds,
+                   expire = edis_util:now() + Seconds * 1000,
                    value = Value},
         State),
   {reply, Reply, stamp(Key, write, State)};
@@ -305,8 +305,12 @@ handle_call(#edis_command{cmd = <<"EXISTS">>, args = [Key]}, _From, State) ->
       end,
   {reply, Reply, stamp(Key, read, State)};
 handle_call(#edis_command{cmd = <<"EXPIRE">>, args = [Key, Seconds]}, From, State) ->
-  handle_call(#edis_command{cmd = <<"EXPIREAT">>, args = [Key, edis_util:now() + Seconds]}, From, State);
-handle_call(#edis_command{cmd = <<"EXPIREAT">>, args = [Key, Timestamp]}, _From, State) ->
+  handle_call(#edis_command{cmd = <<"PEXPIREAT">>, args = [Key, edis_util:now() + Seconds * 1000]}, From, State);
+handle_call(#edis_command{cmd = <<"EXPIREAT">>, args = [Key, Timestamp]}, From, State) ->
+  handle_call(#edis_command{cmd = <<"PEXPIREAT">>, args = [Key, Timestamp * 1000]}, From, State);
+handle_call(#edis_command{cmd = <<"PEXPIRE">>, args = [Key, MiliSeconds]}, From, State) ->
+  handle_call(#edis_command{cmd = <<"PEXPIREAT">>, args = [Key, edis_util:now() + MiliSeconds]}, From, State);
+handle_call(#edis_command{cmd = <<"PEXPIREAT">>, args = [Key, Timestamp]}, _From, State) ->
   Reply =
       case edis_util:now() of
         Now when Timestamp =< Now -> %% It's a delete (it already expired)
@@ -483,7 +487,15 @@ handle_call(#edis_command{cmd = <<"RENAMENX">>, args = [Key, NewKey]}, _From, St
         end
     end,
   {reply, Reply, stamp([Key, NewKey], Action, State)};
-handle_call(#edis_command{cmd = <<"TTL">>, args = [Key]}, _From, State) ->
+handle_call(#edis_command{cmd = <<"TTL">>, args = [Key]}, From, State) ->
+  {reply, Reply, Stamp} = handle_call(#edis_command{cmd = <<"PTTL">>, args = [Key]}, From, State),
+  case Reply of
+    {ok, Ttl} when Ttl > -1 ->
+      {reply, {ok, erlang:round(Ttl / 1000)}, Stamp};
+    _ ->
+      {reply, Reply, Stamp}
+  end;
+handle_call(#edis_command{cmd = <<"PTTL">>, args = [Key]}, _From, State) ->
   Reply =
     case get_item(State, any, Key) of
       not_found ->

@@ -87,7 +87,7 @@ blpop_nothing(Keys) ->
   catch edis_db:run(
     edis_db:process(0),
     #edis_command{cmd = <<"BLPOP">>, args = Keys,
-                  timeout = 10, expire = edis_util:now(),
+                  timeout = 10, expire = erlang:round(edis_util:now() / 1000),
                   group = lists, result_type = multi_bulk}, 10).
 
 -spec blpop([binary()]) -> undefined.
@@ -95,7 +95,7 @@ blpop(_Keys) ->
   edis_db:run(
     edis_db:process(0),
     #edis_command{cmd = <<"BLPOP">>, args = [?KEY],
-                  timeout = 1000, expire = edis_util:now() + 1,
+                  timeout = 1000, expire = erlang:round(edis_util:now() / 1000) + 1,
                   group = lists, result_type = multi_bulk}, 1000).
 
 -spec brpop_nothing([binary()]) -> timeout.
@@ -103,7 +103,7 @@ brpop_nothing(Keys) ->
   catch edis_db:run(
     edis_db:process(0),
     #edis_command{cmd = <<"BRPOP">>, args = Keys,
-                  timeout = 10, expire = edis_util:now(),
+                  timeout = 10, expire = erlang:round(edis_util:now() / 1000),
                   group = lists, result_type = multi_bulk}, 10).
 
 -spec brpop([binary()]) -> undefined.
@@ -111,7 +111,7 @@ brpop(_Keys) ->
   edis_db:run(
     edis_db:process(0),
     #edis_command{cmd = <<"BRPOP">>, args = [?KEY],
-                  timeout = 1000, expire = edis_util:now() + 1,
+                  timeout = 1000, expire = erlang:round(edis_util:now() / 1000) + 1,
                   group = lists, result_type = multi_bulk}, 1000).
 
 -spec brpoplpush([binary()]) -> undefined.
@@ -119,7 +119,7 @@ brpoplpush(_Keys) ->
   edis_db:run(
     edis_db:process(0),
     #edis_command{cmd = <<"BRPOPLPUSH">>, args = [?KEY, <<(?KEY)/binary, "-2">>],
-                  timeout = 1000, expire = edis_util:now() + 1,
+                  timeout = 1000, expire = erlang:round(edis_util:now() / 1000) + 1,
                   group = lists, result_type = bulk}, 1000).
 
 -spec lindex([binary()]) -> binary().

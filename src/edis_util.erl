@@ -21,12 +21,14 @@
 %% @doc Current timestamp
 -spec timestamp() -> float().
 timestamp() ->
-  ?MODULE:now() + element(3, erlang:now()) / 1000000.
+  {Mega, Sec, Micro} = os:timestamp(),
+  Mega * 1000000 + Sec + Micro / 1000000.
 
-%% @doc UTC in *NIX seconds
+%% @doc UTC in miliseconds
 -spec now() -> pos_integer().
 now() ->
-  calendar:datetime_to_gregorian_seconds(calendar:universal_time()) - ?EPOCH.
+  {Mega, Sec, Micro} = os:timestamp(),
+  (Mega * 1000000 + Sec) * 1000 + erlang:round(Micro / 1000).
 
 %% @doc converts all characters in the specified binary to uppercase. 
 -spec upper(binary()) -> binary().

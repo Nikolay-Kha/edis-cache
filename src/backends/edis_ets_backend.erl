@@ -108,5 +108,5 @@ get(_Ref, Key) ->
 %% ====================================================================
 -spec timestamp() -> non_neg_integer().
 timestamp() ->
-  {Mega,Sec,_Micro} = os:timestamp(),
-  Mega*1000000+Sec.
+  {Mega, Sec, _Micro} = os:timestamp(),
+  Mega * 1000000 + Sec.
