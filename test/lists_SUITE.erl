@@ -272,7 +272,9 @@ brpoplpush(Config) ->
 	<<"foo">> = erldis_client:sr_scall(Client,[<<"lrange">>,<<"list3">>,0,-1]),
 
     %% With multiple blocked clients
-    ok = erldis_client:sr_scall(Client,[<<"flushdb">>]),
+	%% TODO replace del with flushdb after implementing it for riak
+	%%ok = erldis_client:sr_scall(Client,[<<"flushdb">>]),
+	erldis_client:sr_scall(Client,[<<"del">>,<<"mylist">>,<<"target">>]),
     ok = erldis_client:sr_scall(Client,[<<"set">>,<<"string">>,<<"I'm not a list">>]),
 	
 	spawn(?MODULE, run_command, [self(),Client,[<<"brpoplpush">>,<<"mylist">>,<<"string">>,0]]),
@@ -282,14 +284,14 @@ brpoplpush(Config) ->
 	receive
 		[{error,<<"ERR Operation against a key holding the wrong kind of value">>}] -> ok;
 		[<<"testtest">>] -> ok
-	after 10000 ->
+	after 4000 ->
 		ct:fail("ERR Timeout")
 	end,
 
 	receive
 		[{error,<<"ERR Operation against a key holding the wrong kind of value">>}] -> ok;
 		[<<"testtest">>] -> ok
-	after 20000 ->
+	after 6000 ->
 		ct:fail("ERR Timeout")
 	end,
 	

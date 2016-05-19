@@ -53,6 +53,18 @@ test: erl
 	rebar skip_deps=true ct -v;
 	#kill `ps aux | grep beam | grep edis_[t]est_server | awk '{print $$2}'`
 
+test-riak: erl
+	${ERL} -config test/test-riak.config -noshell -sname edis_test_server -s edis &
+	mkdir -p ./test/ebin
+	mkdir -p ./logs/ct
+	rebar skip_deps=true ct -v;
+
+test-cache: erl
+	${ERL} -config test/test-cache.config -noshell -sname edis_test_server -s edis &
+	mkdir -p ./test/ebin
+	mkdir -p ./logs/ct
+	rebar skip_deps=true ct -v;
+
 test-hanoidb: erl
 	${ERL} -config test/test-hanoidb.config -noshell -sname edis_test_server -s edis -run elog debug &
 	mkdir -p ./test/ebin
