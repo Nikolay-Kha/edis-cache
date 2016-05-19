@@ -230,12 +230,12 @@ setrange(Config) ->
 getrange(Config) ->
         {client,Client} = lists:keyfind(client, 1, Config),
 
-        <<>> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"0">>,<<"-1">>]),
+        nil = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"0">>,<<"-1">>]),
 
         ok = erldis_client:sr_scall(Client,[<<"set">>,<<"mykey">>,<<"Hello World">>]),
         <<"Hell">> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"0">>,<<"3">>]),
         <<"Hello World">> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"0">>,<<"-1">>]),
-        <<>> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"5">>,<<"3">>]),
+        nil = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"5">>,<<"3">>]),
         <<"orld">> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"-4">>,<<"-1">>]),
         <<" World">> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"5">>,<<"100">>]),
         <<"Hello World">> = erldis_client:sr_scall(Client,[<<"getrange">>,<<"mykey">>,<<"-500">>,<<"100">>]).

@@ -47,8 +47,10 @@ test: erl
 	${ERL} -config test/test.config -noshell -sname edis_test_server -s edis &
 	mkdir -p ./test/ebin
 	mkdir -p ./logs/ct
-	# To run all tests, remove: suites=keys
-	rebar skip_deps=true ct suites=keys -v; \
+	# To run specified tests, add suites=keys
+	# rebar skip_deps=true ct suites=keys -v;
+	# where keys is one of _SUITE.erl from test dir
+	rebar skip_deps=true ct -v;
 	#kill `ps aux | grep beam | grep edis_[t]est_server | awk '{print $$2}'`
 
 test-hanoidb: erl

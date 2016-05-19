@@ -282,14 +282,14 @@ brpoplpush(Config) ->
 	receive
 		[{error,<<"ERR Operation against a key holding the wrong kind of value">>}] -> ok;
 		[<<"testtest">>] -> ok
-	after 4000 ->
+	after 6000 ->
 		ct:fail("ERR Timeout")
 	end,
 
 	receive
 		[{error,<<"ERR Operation against a key holding the wrong kind of value">>}] -> ok;
 		[<<"testtest">>] -> ok
-	after 6000 ->
+	after 12000 ->
 		ct:fail("ERR Timeout")
 	end,
 	
